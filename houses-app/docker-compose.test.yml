@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Test Database
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: houses_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    
+  # Test Redis
+  redis-test:
+    image: redis:7-alpine
+    command: redis-server --save ""
+    
+  # Backend Tests
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    depends_on:
+      - postgres-test
+      - redis-test
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://test_user:test_password@postgres-test:5432/houses_test
+      REDIS_URL: redis://redis-test:6379
+      JWT_SECRET: test-secret
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm test -- --coverage --forceExit
+    
+  # Frontend Tests
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: test
+      NEXT_PUBLIC_API_URL: http://backend-test:3001/api
+      NEXT_PUBLIC_WEBSOCKET_URL: http://backend-test:3001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm test -- --coverage --watchAll=false
