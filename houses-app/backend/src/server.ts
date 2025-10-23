@@ -1,6 +1,15 @@
 import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import { coachingRoutes } from './routes/coaching';
 
 const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use('/api/coaching', coachingRoutes);
 
 // Basic healthcheck endpoint
 app.get('/health', (_req: Request, res: Response) => {
