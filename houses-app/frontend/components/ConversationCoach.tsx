@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useMemo, useState } from "react";
 import Toast from "./Toast";
 import CoachOptionCard, { CoachOption } from "./CoachOptionCard";
@@ -27,7 +29,7 @@ function makeOptions(ctx: Context, firstThoughtRaw: string): CoachOption[] {
   const avoidNote = avoid ? ` (let's skip ${avoid})` : "";
 
   const playfulScript = tweakForMedium(
-    `Plot twist: I’m not great at small talk, but I can nerd out about ${firstThought}—want to trade fun facts?`,
+    `Plot twist: I'm not great at small talk, but I can nerd out about ${firstThought}—want to trade fun facts?`,
     ctx.medium,
     ctx.energy
   );
@@ -46,10 +48,10 @@ function makeOptions(ctx: Context, firstThoughtRaw: string): CoachOption[] {
 
   const directBase =
     ctx.goal === "boundary"
-      ? `I’m not up for that topic${avoidNote}—can we switch to something lighter or mutual?`
+      ? `I'm not up for that topic${avoidNote}—can we switch to something lighter or mutual?`
       : ctx.goal === "ask-out"
-      ? `I’d like to take you out. Let’s pick something we both enjoy—${firstThought} for me; what’s yours?`
-      : `I’d love to hear what lights you up—can we choose a topic we both enjoy? ${firstThought} for me; what’s yours?`;
+      ? `I'd like to take you out. Let's pick something we both enjoy—${firstThought} for me; what's yours?`
+      : `I'd love to hear what lights you up—can we choose a topic we both enjoy? ${firstThought} for me; what's yours?`;
 
   const directScript = tweakForMedium(directBase, ctx.medium, ctx.energy);
 
@@ -70,7 +72,7 @@ function makeOptions(ctx: Context, firstThoughtRaw: string): CoachOption[] {
       why: "Turns a pause into shared play; invites reciprocity with light flirt if comfy.",
       vibe: "Playful, gently flirty",
       risk: "Low",
-      followUp: "Your turn—what’s a weird skill you have?",
+      followUp: "Your turn—what's a weird skill you have?",
       texting: textingTweak,
       inPerson: inPersonTweak,
     },
@@ -80,7 +82,7 @@ function makeOptions(ctx: Context, firstThoughtRaw: string): CoachOption[] {
       why: "Invites their preferences; shows attentiveness without pressure.",
       vibe: "Curious, warm",
       risk: "Low–Medium",
-      followUp: "What’s something you’ve gotten nerdy about lately?",
+      followUp: "What's something you've gotten nerdy about lately?",
       texting: textingTweak,
       inPerson: inPersonTweak,
     },
@@ -102,7 +104,7 @@ function makeOptions(ctx: Context, firstThoughtRaw: string): CoachOption[] {
       risk: "Medium–Higher",
       followUp:
         ctx.goal === "ask-out"
-          ? "If not this weekend, what’s a better time?"
+          ? "If not this weekend, what's a better time?"
           : "Want to trade two minutes each?",
       texting: textingTweak,
       inPerson: inPersonTweak,

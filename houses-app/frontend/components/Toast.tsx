@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+"use client";
 
 type ToastProps = {
   message: string;
