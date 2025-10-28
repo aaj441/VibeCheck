@@ -1,0 +1,86 @@
+# Artillery.io load testing configuration
+config:
+  target: "http://localhost:3001"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 20
+      name: "Ramp up"
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "./load-test-functions.js"
+
+scenarios:
+  - name: "User Registration and Login Flow"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/register"
+          json:
+            email: "{{ $randomEmail() }}"
+            username: "{{ $randomUsername() }}"
+            password: "{{ $randomPassword() }}"
+            houseType: "{{ $randomHouse() }}"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+      
+      - think: 2
+      
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+
+  - name: "Authenticated User Actions"
+    weight: 50
+    flow:
+      - function: "generateAuthToken"
+      
+      - get:
+          url: "/api/users/profile"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      
+      - think: 1
+      
+      - get:
+          url: "/api/matches/potential"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      
+      - think: 2
+      
+      - get:
+          url: "/api/conversations"
+          headers:
+            Authorization: "Bearer {{ token }}"
+
+  - name: "Real-time WebSocket Connection"
+    weight: 30
+    engine: "socketio"
+    flow:
+      - function: "generateAuthToken"
+      
+      - emit:
+          channel: "connection"
+          data:
+            token: "{{ token }}"
+      
+      - think: 5
+      
+      - loop:
+        - emit:
+            channel: "message:send"
+            data:
+              conversationId: "{{ $randomString() }}"
+              content: "{{ $randomString() }}"
+        - think: 3
+        count: 10

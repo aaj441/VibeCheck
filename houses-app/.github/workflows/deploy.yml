@@ -1,0 +1,82 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-get-login@v2
+      
+      - name: Build and push Backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/houses-backend:$IMAGE_TAG ./backend
+          docker push $ECR_REGISTRY/houses-backend:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/houses-backend:$IMAGE_TAG $ECR_REGISTRY/houses-backend:latest
+          docker push $ECR_REGISTRY/houses-backend:latest
+      
+      - name: Build and push Frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=${{ secrets.PRODUCTION_API_URL }} \
+            --build-arg NEXT_PUBLIC_WEBSOCKET_URL=${{ secrets.PRODUCTION_WEBSOCKET_URL }} \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            -t $ECR_REGISTRY/houses-frontend:$IMAGE_TAG ./frontend
+          docker push $ECR_REGISTRY/houses-frontend:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/houses-frontend:$IMAGE_TAG $ECR_REGISTRY/houses-frontend:latest
+          docker push $ECR_REGISTRY/houses-frontend:latest
+      
+      - name: Update ECS service
+        run: |
+          aws ecs update-service \
+            --cluster houses-production \
+            --service houses-backend \
+            --force-new-deployment
+          
+          aws ecs update-service \
+            --cluster houses-production \
+            --service houses-frontend \
+            --force-new-deployment
+      
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster houses-production \
+            --services houses-backend houses-frontend
+      
+      - name: Notify deployment status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment ${{ job.status }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
